@@ -133,3 +133,5 @@ Inspiration for this module originates from and credit goes to:
 # Development
 
 Please see separate document on [development](./DEVELOPMENT.md)
+
+[Contributors](./AUTHORS.md)
