@@ -254,7 +254,7 @@ char *itemid_to_influx_data(zbx_uint64_t itemid)
 							// "i.key_"
 							// "), ' ', '\\ '), ',', '\\,') ||"
 
-							"',applications=' || coalesce(replace(replace(("
+							"coalesce(',applications=' || replace(replace(("
 							"select string_agg(a.name, '|') "
 							"from applications a "
 							"inner join items_applications ia on ia.applicationid = a.applicationid "
