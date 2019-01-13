@@ -385,7 +385,7 @@ static void history_general_cb(const int item_type, const void *history, int his
 				zbx_snprintf(entry, sizeof(entry), "%s value=%f %s\n", influx_data, float_val, timestamp);
 				break;
 			case  ZBX_ITEM_INTEGER:
-				zbx_snprintf(entry, sizeof(entry), "%s value=%llu %s\n", influx_data, int_val, timestamp);
+				zbx_snprintf(entry, sizeof(entry), "%s value=" ZBX_FS_UI64 " %s\n", influx_data, int_val, timestamp);
 
 				break;
 			case  ZBX_ITEM_STRING:
@@ -397,7 +397,7 @@ static void history_general_cb(const int item_type, const void *history, int his
 
 				break;
 			case  ZBX_ITEM_LOG:
-				zbx_snprintf(entry, sizeof(entry), "%s,logeventid=%d,severity=%d,source=%s value=\"%s\" %s\n", influx_data, log_logid, log_sev, log_src, history_log[i].value, log_timestamp);
+				zbx_snprintf(entry, sizeof(entry), "%s,logeventid=%d,severity=%d,source=%s value=\"%s\" %d000000000\n", influx_data, log_logid, log_sev, log_src, history_log[i].value, log_timestamp);
 				break;
 			default:
 				THIS_SHOULD_NEVER_HAPPEN;
@@ -418,7 +418,7 @@ static void	history_float_cb(const ZBX_HISTORY_FLOAT *history, int history_num)
 {
   	zabbix_log(MODULE_LOG_LEVEL, "[%s] Syncing %d float values", MODULE_NAME, history_num);
 	history_general_cb(ZBX_ITEM_FLOAT, (const void *) history, history_num);
-	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing float values", MODULE_NAME, history_num);
+	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing float values", MODULE_NAME);
 }
 
 
@@ -426,28 +426,28 @@ static void	history_integer_cb(const ZBX_HISTORY_INTEGER *history, int history_n
 {
   	zabbix_log(MODULE_LOG_LEVEL, "[%s] Syncing %d int values", MODULE_NAME, history_num);
 	history_general_cb(ZBX_ITEM_INTEGER, (const void *) history, history_num);
-	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing int values", MODULE_NAME, history_num);
+	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing int values", MODULE_NAME);
 }
 
 static void	history_string_cb(const ZBX_HISTORY_STRING *history, int history_num)
 {
   	zabbix_log(MODULE_LOG_LEVEL, "[%s] Syncing %d string values", MODULE_NAME, history_num);
 	history_general_cb(ZBX_ITEM_STRING, (const void *) history, history_num);
-	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing string values", MODULE_NAME, history_num);
+	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing string values", MODULE_NAME);
 }
 
 static void	history_text_cb(const ZBX_HISTORY_TEXT *history, int history_num)
 {
   	zabbix_log(MODULE_LOG_LEVEL, "[%s] Syncing %d text values", MODULE_NAME, history_num);
 	history_general_cb(ZBX_ITEM_TEXT, (const void *) history, history_num);
-	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing history values", MODULE_NAME, history_num);
+	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing history values", MODULE_NAME);
 }
 
 static void	history_log_cb(const ZBX_HISTORY_LOG *history, int history_num)
 {
   	zabbix_log(MODULE_LOG_LEVEL, "[%s] Syncing %d log values", MODULE_NAME, history_num);
 	history_general_cb(ZBX_ITEM_LOG, (const void *) history, history_num);
-	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing log values", MODULE_NAME, history_num);
+	zabbix_log(MODULE_LOG_LEVEL, "[%s]     Finished syncing log values", MODULE_NAME);
 }
 
 
