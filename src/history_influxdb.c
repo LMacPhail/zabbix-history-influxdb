@@ -268,8 +268,8 @@ char *itemid_to_influx_data(zbx_uint64_t itemid)
 		ret_string = zbx_strdup(NULL, row[0]);
 	}
 	else {
-		zabbix_log(LOG_LEVEL_ERR, "[%s] query result returned null", MODULE_NAME);
-		exit(EXIT_FAILURE);
+		zabbix_log(LOG_LEVEL_ERR, "[%s] missing information for itemid " ZBX_FS_UI64, MODULE_NAME, itemid);
+		ret_string = NULL;
 	}
 	DBfree_result(result);
 	return ret_string;
@@ -376,6 +376,9 @@ static void history_general_cb(const int item_type, const void *history, int his
 		}
 
 		influx_data = itemid_to_influx_data(itemid);
+
+		if (NULL == influx_data)
+			continue;
 
 		char entry[METRIC_LEN + ITEM_VALUE_LEN + 20];
 		zbx_snprintf(timestamp, sizeof(timestamp), "%09d%09d", cl, ns);
