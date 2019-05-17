@@ -13,6 +13,9 @@ char *CONFIG_INFLUXDB_USER = NULL;
 char *CONFIG_INFLUXDB_PWD = NULL;
 int *CONFIG_INFLUXDB_SSL_INSECURE = NULL;
 int *CONFIG_FORCE_MODULE_DEBUG = NULL;
+int *CONFIG_ZABBIX_MAJOR_VERSION = NULL;
+int *CONFIG_DATABASE_ENGINE = NULL;
+char *PARSE_DATABASE_ENGINE = NULL;
 
 
 /*********************************************************************
@@ -46,6 +49,10 @@ void     zbx_module_load_config(void)
 				PARM_OPT,		0,		1},
 		{"ForceModuleDebugLogging",	&CONFIG_FORCE_MODULE_DEBUG,	TYPE_INT,
 				PARM_OPT,		0,		1},
+		{"ZabbixMajorVersion",	&CONFIG_ZABBIX_MAJOR_VERSION,	TYPE_INT,
+				PARM_OPT,		3,		4},
+		{"DatabaseEngine",	&PARSE_DATABASE_ENGINE,	TYPE_STRING,
+				PARM_OPT,		0,		0},
 		{NULL}
 	};
 
@@ -54,7 +61,9 @@ void     zbx_module_load_config(void)
 	CONFIG_INFLUXDB_ADDRESS = zbx_strdup(CONFIG_INFLUXDB_ADDRESS, "localhost");
 	CONFIG_INFLUXDB_PORT = zbx_strdup(CONFIG_INFLUXDB_PORT, "8086");
 	CONFIG_INFLUXDB_PROTOCOL = zbx_strdup(CONFIG_INFLUXDB_PROTOCOL, "http");
-	CONFIG_FORCE_MODULE_DEBUG = 0;
+	CONFIG_FORCE_MODULE_DEBUG = (int*) 0;
+	CONFIG_ZABBIX_MAJOR_VERSION = (int*) 4;
+	PARSE_DATABASE_ENGINE = zbx_strdup(PARSE_DATABASE_ENGINE, "mysql");
 
 
 	// load main config file
@@ -63,6 +72,14 @@ void     zbx_module_load_config(void)
 
 	// load local config file if present
 	parse_cfg_file(MODULE_LOCAL_CONFIG_FILE, module_cfg, ZBX_CFG_FILE_OPTIONAL, ZBX_CFG_STRICT);
+
+	// parse database engine
+	if (strcmp(PARSE_DATABASE_ENGINE, "mysql") == 0) {
+	    CONFIG_DATABASE_ENGINE = (int*) DATABASE_ENGINE_MYSQL;
+	}
+	else if (strcmp(PARSE_DATABASE_ENGINE, "postgresql") == 0) {
+	    CONFIG_DATABASE_ENGINE = (int*) DATABASE_ENGINE_POSTGRESQL;
+	}
 
 	// clean up path variables
 	zbx_free(MODULE_CONFIG_FILE);

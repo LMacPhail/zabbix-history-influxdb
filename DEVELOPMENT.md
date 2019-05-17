@@ -1,8 +1,8 @@
 # Local Development
 
-You will need Zabbix sources for compiling the module. For running the module you have two options:
-- compile whole Zabbix source code and run from there (follow https://www.zabbix.com/developers)
-- install Zabbix from distributed packages and just put compiled module and module's config in the modules path, then restart Zabbix as usual
+You will need Zabbix sources for compiling the module. For running the zabbix-server you have two options:
+- compile Zabbix source code and run from there (follow https://www.zabbix.com/developers)
+- install Zabbix from distributed packages and just link compiled module and module's config in the modules path, then restart Zabbix as usual (you need Zabbix source code only to compile module)
 
 We are using the second option. Our local development environment is:
 - VirtualBox with Ubuntu 18.04
@@ -24,7 +24,7 @@ https://www.zabbix.com/documentation/3.4/manual/installation/install#installing_
 
 Download the zabbix source code from https://www.zabbix.com/download_sources and place it in the home dir (or any other workdir you like).
 
-Run git clone of this repository inside of the zabbix sources under `src/modules`
+Get a copy of this module's sources - run `git clone` inside of the zabbix sources under `src/modules`
 
 ```
 $ cd zabbix-<version>/src/modules/
@@ -37,7 +37,7 @@ Use option `ForceModuleDebugLogging=1` in the local config, this will enforce de
 
 Also put all necessities for your InfluxDB connection in the local config.
 
-We create symlink `/usr/lib/zabbix/modules` pointing to module's `dist/`.
+Create symlink `/usr/lib/zabbix/modules` pointing to module's `dist/` to allow zabbix-server read the module.
 
 ```
 # sudo ln -s ~/zabbix-<version>/src/modules/zabbix-history-influxdb/dist /usr/lib/zabbix/modules
@@ -45,7 +45,7 @@ We create symlink `/usr/lib/zabbix/modules` pointing to module's `dist/`.
 
 ## Similarly to regular installation
 
-Now edit the main Zabbix server configuration file, usually in `/etc/zabbix/zabbix_server.conf` and change modules section near the end to point on your module:
+Enable the module in the main Zabbix server configuration file (usually in `/etc/zabbix/zabbix_server.conf`) - change modules section near the end to point on your module:
 
 ```
 LoadModulePath=/usr/lib/zabbix/modules
@@ -53,18 +53,20 @@ LoadModulePath=/usr/lib/zabbix/modules
 LoadModule=history_influxdb.so
 ```
 
-Restart Zabbix server daemon, usually:
+Restart Zabbix server daemon:
 
 ```
 # systemctl restart zabbix-server
 ```
 
-Open Zabbix log, usually `/var/log/zabbix_server.log`. You now should see all the debug messages from the module, including potential errors.
+Running `tail -f /var/log/zabbix_server.log` should list all the debug messages from the module, including potential errors.
 
 
 # Compiling
 
-You will need the packages
+Finally if you change any module source, you need to compile it with `make` command.
+
+For compiler to work you will need, apart from Zabbix sources, these packages
 
 ```
 # apt install gcc libcurl4-openssl-dev libpcre3-dev libevent-dev

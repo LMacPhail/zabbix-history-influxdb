@@ -17,6 +17,8 @@
   - `InfluxDBSSLInsecure=0`
   - `InfluxDBUser=`
   - `InfluxDBPassword=`
+  - `ZabbixMajorVersion=4`
+  - `DatabaseEngine=mysql`
 
 
 This is what you get in Grafana:

@@ -141,7 +141,13 @@ int	zbx_module_init(void)
 		zbx_snprintf(influxdb_write_url, CURL_LEN, "%s://%s:%s/write?db=%s&u=%s&p=%s", CONFIG_INFLUXDB_PROTOCOL, CONFIG_INFLUXDB_ADDRESS,
 						CONFIG_INFLUXDB_PORT, CONFIG_INFLUXDB_NAME, CONFIG_INFLUXDB_USER, CONFIG_INFLUXDB_PWD);
 	}
+	if(CONFIG_DATABASE_ENGINE == NULL){
+		zbx_error("DatabaseEngine missconfigured expected one of (mysql, postgresql), but found %s", PARSE_DATABASE_ENGINE);
+		exit(EXIT_FAILURE);
+	}
 	zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Initialised History InfluxDB module, target: %s", MODULE_NAME, influxdb_write_url);
+	zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Database Engine used: %s", MODULE_NAME, PARSE_DATABASE_ENGINE);
+	zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Using compatibility with Zabbix %d", MODULE_NAME, CONFIG_ZABBIX_MAJOR_VERSION);
 
 	return ZBX_MODULE_OK;
 }
@@ -214,54 +220,139 @@ char *itemid_to_influx_data(zbx_uint64_t itemid)
 	DB_RESULT	result;
 	DB_ROW		row;
 	char *ret_string;
+//	const char *cut_fnc;
+//	const char *agg_fnc;
+//	const char *agg_sep;
+	static char query_str[3000];
 
-	result = DBselect("SELECT replace(replace("
-							"coalesce("
-							  "replace("
-							    "replace("
-							      "replace("
-							        "replace("
-							          "replace("
-							            "replace("
-							              "replace("
-							                "replace("
-							                  "replace("
-							                    "i.name, '$1',"
-							                    "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 1)), '$2',"
-							                  "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 2)), '$3',"
-							                "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 3)), '$4',"
-							              "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 4)), '$5',"
-							            "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 5)), '$6',"
-							          "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 6)), '$7',"
-							        "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 7)), '$8',"
-							      "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 8)), '$9',"
-							    "split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 9)),"
-								"i.name"
-							"), ',', '\\,'), ' ', '\\ ') ||"
+	switch((int)(uintptr_t)CONFIG_DATABASE_ENGINE) {
+	    case DATABASE_ENGINE_POSTGRESQL:
+				// prepare query for PostgreSQL
+				zbx_snprintf(query_str, sizeof(query_str),
+				"SELECT "
+				// item name with $1 - $9 replaced and escaped ',' and ' '
+				    "replace(replace(replace("
+				        "coalesce("
+				            // replace all $1 - $9 in item name with key parameters
+				            "replace(replace(replace(replace(replace(replace(replace(replace(replace(i.name,"
+				            " '$1', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 1)),"
+				            " '$2', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 2)),"
+				            " '$3', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 3)),"
+				            " '$4', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 4)),"
+				            " '$5', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 5)),"
+				            " '$6', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 6)),"
+				            " '$7', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 7)),"
+				            " '$8', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 8)),"
+				            " '$9', split_part(substring(i.key_ FROM '\\[(.+)\\]'), ',', 9)),"
+				            // or use plain item name if no variables to replace
+				            "i.name"
+				        "), "
+				    "' ', '\\ '), '\"', '\\\"'), ',', '\\,')"
+				" || "
+				// host name with escaped ',' and ' '
+				    "',host_name=' || "
+				    "replace(replace(("
+				        "select h.name from hosts h where h.hostid=i.hostid"
+				    "), ' ', '\\ '), ',', '\\,')"
+				" || "
+				// host groups with escaped ',' and ' ' joined with '|'
+				    "',host_groups=' || "
+				    "replace(replace(("
+				        "select string_agg(g.name, '|') "
+				        "from %s g "
+				        "inner join hosts_groups hg on hg.groupid = g.groupid "
+				        "where hg.hostid=i.hostid"
+				    "), ' ', '\\ '), ',', '\\,')"
+				// " || "
+				// item_key with escaped ',' and ' '
+				//     "',item_key=' || "
+				//     "replace(replace(("
+				//         "i.key_"
+				//     "), ' ', '\\ '), ',', '\\,')"
+				" || "
+				// applications
+				    "coalesce("
+				    "',applications=' || replace(replace(("
+				        "select string_agg(a.name, '|') "
+				        "from applications a "
+				        "inner join items_applications ia on ia.applicationid = a.applicationid "
+				        "where ia.itemid=i.itemid"
+				    "), ' ', '\\ '), ',', '\\,'), "
+				    "'') "
+				"FROM items i WHERE i.itemid=" ZBX_FS_UI64,
+				// Zabbix 3 vs Zabbix 4 table name
+				(CONFIG_ZABBIX_MAJOR_VERSION > (int*) 3) ? "hstgrp": "groups", itemid);
+				break;
 
-							"',host_name=' || replace(replace(("
-							"select h.name from hosts h where h.hostid=i.hostid"
-							"), ' ', '\\ '), ',', '\\,') ||"
+	    case DATABASE_ENGINE_MYSQL:
+				// prepare query for MySQL
+				zbx_snprintf(query_str, sizeof(query_str),
+				"SELECT CONCAT("
+				// item name with $1 - $9 replaced and ',', '"' and ' ' escaped
+				    "replace(replace(replace("
+				        "coalesce("
+				            // replace all $1 - $9 in item name with key parameters
+										// magic line explained:
+										// +------------------------------------------------+-----------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+										// | key_                                           | name                                          | substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))) |
+										// +------------------------------------------------+-----------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+										// | web.test.rspcode[CURL mockapp - http,Homepage] | Response code for step "$2" of scenario "$1". | CURL mockapp - http,Homepage                                                                                              |
+										// +------------------------------------------------+-----------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+										// find first '[' and last ']' in the key_ and for what is between use substring_index() to extract correct parameter
+				            "replace(replace(replace(replace(replace(replace(replace(replace(replace(i.name,"
+				            " '$1', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 1)),"
+				            " '$2', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 2)),"
+				            " '$3', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 3)),"
+				            " '$4', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 4)),"
+				            " '$5', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 5)),"
+				            " '$6', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 6)),"
+				            " '$7', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 7)),"
+				            " '$8', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 8)),"
+				            " '$9', substring_index(substring(i.key_, position('[' in i.key_)+1, length(i.key_) - position('[' in i.key_) - position(']' in reverse(i.key_))), ',', 9)),"
+				            // or use plain item name if no variables to replace
+				            "i.name"
+				        "), "
+				    "' ', '\\\\ '), '\"', '\\\\\"'), ',', '\\\\,')"
+				", "
+				// host name with escaped ',' and ' '
+				    "concat(',host_name=', replace(replace(("
+				        "select h.name from hosts h where h.hostid=i.hostid"
+				    "), ' ', '\\\\ '), ',', '\\\\,'))"
+				", "
+				// host groups with escaped ',' and ' ' joined with '|'
+				    "concat(',host_groups=', replace(replace(("
+				        "select group_concat(g.name SEPARATOR '|') "
+				        "from %s g "
+				        "inner join hosts_groups hg on hg.groupid = g.groupid "
+				        "where hg.hostid=i.hostid"
+				    "), ' ', '\\\\ '), ',', '\\\\,'))"
+				// ", "
+				// item_key with escaped ',' and ' '
+				//     "concat(',item_key=', replace(replace(("
+				//         "i.key_"
+				//     "), ' ', '\\\\ '), ',', '\\\\,'))"
+				", "
+				// applications
+				    "coalesce(concat(',applications=', replace(replace(("
+				        "select group_concat(a.name SEPARATOR '|') "
+				        "from applications a "
+				        "inner join items_applications ia on ia.applicationid = a.applicationid "
+				        "where ia.itemid=i.itemid"
+				    "), ' ', '\\\\ '), ',', '\\\\,')), "
+				    "'') "
+				") FROM items i WHERE i.itemid=" ZBX_FS_UI64,
 
-							"',host_groups=' || coalesce(replace(("
-							"select string_agg(g.name, '|') "
-							"from groups g "
-							"inner join hosts_groups hg on hg.groupid = g.groupid "
-							"where hg.hostid=i.hostid"
-							"), ' ', '\\ '),'') ||"
+				// Zabbix 3 vs Zabbix 4 table name
+				(CONFIG_ZABBIX_MAJOR_VERSION > (int*) 3) ? "hstgrp": "groups", itemid);
+				break;
 
-							// "',item_key=' || replace(replace(("
-							// "i.key_"
-							// "), ' ', '\\ '), ',', '\\,') ||"
+	    default:
+				THIS_SHOULD_NEVER_HAPPEN;
+	}
 
-							"coalesce(',applications=' || replace(replace(("
-							"select string_agg(a.name, '|') "
-							"from applications a "
-							"inner join items_applications ia on ia.applicationid = a.applicationid "
-							"where ia.itemid=i.itemid"
-							"), ' ', '\\ '), ',', '\\,'),'') "
-
-						"from items i where i.itemid=" ZBX_FS_UI64, itemid);
+	// log for debugging the query
+	// zabbix_log(MODULE_LOG_LEVEL, "[%s] itemid_to_influx_data query: %s", MODULE_NAME, query_str);
+	result = DBselect("%s", query_str);
 
 	if (NULL != (row = DBfetch(result)))
 	{
@@ -272,6 +363,9 @@ char *itemid_to_influx_data(zbx_uint64_t itemid)
 		ret_string = NULL;
 	}
 	DBfree_result(result);
+
+	// log for debugging the query
+	// zabbix_log(MODULE_LOG_LEVEL, "[%s] itemid_to_influx_data result: %s", MODULE_NAME, ret_string);
 	return ret_string;
 }
 
