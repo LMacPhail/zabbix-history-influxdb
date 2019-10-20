@@ -68,11 +68,11 @@ Now you should be able to see all the Zabbix data in InfluxDB and Grafana (if yo
 # Security and Sustainability
 
 Please consider using authorization with InfluxDB as described on
-https://docs.influxdata.com/influxdb/v1.6/administration/authentication_and_authorization/#authorization.
+https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/#authorization.
 
-The above has no real point if you don't use HTTPS. In order to do so, follow the instructions to set up a certificate and key on https://docs.influxdata.com/influxdb/v1.6/administration/https_setup/.
+The above has no real point if you don't use HTTPS. In order to do so, follow the instructions to set up a certificate and key on https://docs.influxdata.com/influxdb/latest/administration/https_setup/.
 
-Please consider some [Downsampling and data retention](https://docs.influxdata.com/influxdb/v1.6/guides/downsampling_and_retention/) strategies in Influx.
+Please consider some [Downsampling and data retention](https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/) strategies in Influx.
 
 Don't forget to maintain your Zabbix history by either build-in House keeping process or with table partitioning.
 
@@ -91,7 +91,7 @@ Don't forget to maintain your Zabbix history by either build-in House keeping pr
 <metric_str>,host_name=<str>,host_groups=<str>[,applications=<str>] value=<float|int|str> <timestamp>
 ```
 
-Example of the payload sent to InfluxDB including escaping. Internally cURL is used to POST values to a URL similar to `http://localhost:8086/write?db=name_of_your_db` (constructed from history_influxdb.conf values). More information on writing to Influx using cURL can be found at https://docs.influxdata.com/influxdb/v1.6/guides/writing_data/
+Example of the payload sent to InfluxDB including escaping. Internally cURL is used to POST values to a URL similar to `http://localhost:8086/write?db=name_of_your_db` (constructed from history_influxdb.conf values). More information on writing to Influx using cURL can be found at https://docs.influxdata.com/influxdb/latest/guides/writing_data/
 
 
 ```
@@ -108,7 +108,7 @@ Imagine some users (let's say 20 guys) are looking into data using Grafana and d
 
 Motivation for this module was to offer data collected by Zabbix for analysis and extensive querying to the wider audience. Our solution to this is to split Zabbix database backend and Grafana data source into two independent data stores, we have chosen InfluxDB for it's simplicity and focus on time series data, but other options here may be Elastic, Graphite or Prometheus.
 
-Since Zabbix 3.2.0 we may use a module to [handle history data](https://www.zabbix.com/documentation/3.4/manual/config/items/loadablemodules), this project leverage this to forward data to InfluxDB.
+Since Zabbix 3.2.0 we may use a module to [handle history data](https://www.zabbix.com/documentation/current/manual/config/items/loadablemodules), this project leverage this to forward data to InfluxDB.
 
 Inspiration for this module originates from and credit goes to:
 - https://grafana.com/plugins/alexanderzobnin-zabbix-app

@@ -15,8 +15,8 @@ We are using the second option. Our local development environment is:
 
 Create a VM and install your Zabbix server with PostgreSQL from packages by following these instructions:
 
-https://www.zabbix.com/documentation/3.4/manual/installation/install_from_packages/debian_ubuntu
-https://www.zabbix.com/documentation/3.4/manual/installation/install#installing_frontend
+https://www.zabbix.com/documentation/current/manual/installation/install_from_packages/debian_ubuntu
+https://www.zabbix.com/documentation/current/manual/installation/install#installing_frontend
 
 > Hint: either disable SNMP monitoring or install snmp-mibs-downloader from multiverse repo to get rid of long warning in the log file after each zabbix server start.
 
