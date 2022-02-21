@@ -147,7 +147,7 @@ int	zbx_module_init(void)
 	}
 	zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Initialised History InfluxDB module, target: %s", MODULE_NAME, influxdb_write_url);
 	zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Database Engine used: %s", MODULE_NAME, PARSE_DATABASE_ENGINE);
-	zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Using compatibility with Zabbix %d", MODULE_NAME, CONFIG_ZABBIX_MAJOR_VERSION);
+	//zabbix_log(LOG_LEVEL_INFORMATION, "[%s] Using compatibility with Zabbix %d", MODULE_NAME, CONFIG_ZABBIX_MAJOR_VERSION);
 
 	return ZBX_MODULE_OK;
 }
